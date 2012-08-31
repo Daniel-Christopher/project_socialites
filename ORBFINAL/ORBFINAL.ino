@@ -17,7 +17,7 @@ Mike McCauley (mikem@open.com.au)
 ids used = 
 **********
 */
-const char id = 'e';
+const char id = 'c';
 int numberOfOrbs = 0;
 int siteRate;
 long int prevOrbTime[26];
@@ -61,7 +61,9 @@ void loop(){
     //if you get a message
     if (vw_get_message(buf, &buflen)){
       //debug prints, prints the ID of the Orb it recieved and the number of Orbs
+      Serial.print("Number of Orbs if got message  ");
       Serial.println(numberOfOrbs);
+      Serial.print("id of orb or site = ");
       Serial.println(char(buf[2]) );
      
       //if the message is a site message
@@ -74,6 +76,7 @@ void loop(){
   }
  // else Serial.println("fail");//if we are at a site and we did not recieve a message 
   else {
+    Serial.print("number of orbs if didn't get message  ");
     Serial.println(numberOfOrbs);
     blink(normColor, numberOfOrbs);
   }
