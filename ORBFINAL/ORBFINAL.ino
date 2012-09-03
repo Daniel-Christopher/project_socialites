@@ -17,12 +17,24 @@ Mike McCauley (mikem@open.com.au)
 ids used = 
 **********
 */
-const char id = 'c';
+
+struct orb{
+  char id;
+  long int timeSeen;
+  char color;
+}
+
+
+const char id = 'b';
+orb orbs[26];
 int numberOfOrbs = 0;
 int siteRate;
 long int prevOrbTime[26];
 char sites[10];
 long int prevSiteTimes[10];
+int colorCounter = 0;
+int colors[7];
+//char orbColors[26];
 color normColor = color('0');
 color siteColor = color('/0');
 int sendCounter = random(400, 800);
@@ -38,6 +50,10 @@ void setup(){
   //initialize the timeout ties for coming into contact with other orbs
   for(int i = 0; i < 26; i++){
     prevOrbTime[i] = 0;
+    orbs = null;
+  }
+  for(int i = 0l i < 7; i++){
+    colors[i] = 0;
   }
   pinMode(transPin, OUTPUT);
   // Initialise the IO and ISR
@@ -70,15 +86,23 @@ void loop(){
       if (buf[0] == 's') site(buf[1], buf[2], buf[3]);
       //if the message is just another orb
       else {
-        prevOrbTime[buf[2] - 97] = millis();
+        if(orbs[buf[2]-97] == null){
+          orbs[buf[2]-97] = {buf[2], millis(), buf[3] }
+        }
+        else {
+          orbs[buf[2]-97].timeSeen = millis();
+          orbs[buf[2]- 97].color = buf[3];
+          colors[buf[3]-48]++;
+        }
+        
+        /*prevOrbTime[buf[2] - 97] = millis();
+        orbColors[buf[2] - 97] = buf[1];*/
       }
     }
   }
  // else Serial.println("fail");//if we are at a site and we did not recieve a message 
-  else {
-    Serial.print("number of orbs if didn't get message  ");
-    Serial.println(numberOfOrbs);
-    blink(normColor, numberOfOrbs);
+  else if(numberOfOrbs > 0) {
+    blink(color('0'), numberOfOrbs);
   }
   //send the message if the counter of the send time is up 
  if(checkCounter()) orbSend();
@@ -109,6 +133,7 @@ calls pulse function with maped delay time (dpending on number of orbs)
 maps the fade rate depending on the number of orbs
 */
 void blink(color hue, int rate){
+  
   pulse(hue, map(rate, 0, 6, 40, 1), map(rate,0,6,5,15));
 }
 
@@ -135,9 +160,9 @@ it will also blink at the speed the site tells it to
 void site(char Color, char people, char siteId){ 
   //set the timoue value for a site to 3.
   //if it is not already in the site array and there is greater than one person
-  if (prevSiteTimes[siteId-48] == 0 && people > '1' ){
+  if (prevSiteTimes[siteId-48] == 0 ){
     //update the color to the new color if there is more than one person at the site and we have not yet een to the site
-    normColor = normColor++;
+    normColor = color(normColor.colorNum + 1);
   }   
   if(people > '1') {
     prevSiteTimes[siteId-48] = millis();
@@ -157,9 +182,11 @@ void checkTimeOut(){
   numberOfOrbs = 0;
   long int currTime = millis();
   for(int i = 0; i < 26 ; i++){
-    if(prevOrbTime[i] == 0) continue;
+    if(orbs[i] != null) {
     //if the certain value is greater than zero
-    if(currTime - prevOrbTime[i] < 20000) numberOfOrbs++;
+      if(currTime - orbs[i].timeSeen < 20000) numberOfOrbs++;
+      else colors[orbs[i]-48]--;
+    }
   }
   blink(normColor, numberOfOrbs);
   
@@ -199,6 +226,7 @@ void pulse(color hue, int rate, int fadeRate){
         //send one more time.
         if(checkCounter()) orbSend();
 }
+
 /*
 checks to see if the timer for sending is up
 if it is return true, if it is ot return false
