@@ -18,11 +18,11 @@ ids used =
 **********
 */
 
-struct orb{
-  char id;
+typedef struct{
+  boolean init;
   long int timeSeen;
   char color;
-}
+} orb;
 
 
 const char id = 'b';
@@ -50,9 +50,9 @@ void setup(){
   //initialize the timeout ties for coming into contact with other orbs
   for(int i = 0; i < 26; i++){
     prevOrbTime[i] = 0;
-    orbs = null;
+    orbs[i].init = false;
   }
-  for(int i = 0l i < 7; i++){
+  for(int i = 0; i < 7; i++){
     colors[i] = 0;
   }
   pinMode(transPin, OUTPUT);
@@ -86,12 +86,15 @@ void loop(){
       if (buf[0] == 's') site(buf[1], buf[2], buf[3]);
       //if the message is just another orb
       else {
-        if(orbs[buf[2]-97] == null){
-          orbs[buf[2]-97] = {buf[2], millis(), buf[3] }
+        int Orb = buf[2]-97;
+        if(!orbs[buf[2]-97].init){
+          orbs[Orb].init = true;
+          orbs[Orb].timeSeen = millis();
+          orbs[Orb].color = buf[3];
         }
         else {
-          orbs[buf[2]-97].timeSeen = millis();
-          orbs[buf[2]- 97].color = buf[3];
+          orbs[Orb].timeSeen = millis();
+          orbs[Orb].color = buf[3];
           colors[buf[3]-48]++;
         }
         
@@ -185,7 +188,7 @@ void checkTimeOut(){
     if(orbs[i] != null) {
     //if the certain value is greater than zero
       if(currTime - orbs[i].timeSeen < 20000) numberOfOrbs++;
-      else colors[orbs[i]-48]--;
+      else colors[orbs[i].color-48]--;
     }
   }
   blink(normColor, numberOfOrbs);
