@@ -15,21 +15,33 @@
  * ids used = 
  **********
  */
+ typedef struct{
+  boolean seen;
+  long int timeSeen;
+  char color;
+} orb;
+ 
 const char id = '7';
 int numberOfOrbs = 0;
 int siteRate = 0;
+int colors[7];
+orb orbs[26];
 long int prevOrbTime[26];
 char highColor = '0';
+int colorCounter = 0;
 int sendCounter = random(400, 800);
 int transPin = 4;
 long int prevSendTime = 0;
 
 void setup(){
   Serial.begin(9600);
-  //initialize the orb ids
-//  for(int i = 0; i < 26; i++){
-//    orbId[i] = 0;
-//  }
+   for(int i = 0; i < 26; i++){
+   // prevOrbTime[i] = 0;
+    orbs[i].seen = false;
+  }
+  for(int i = 0; i < 7; i++){
+    colors[i] = 0;
+  }
   pinMode(transPin, OUTPUT);
   // Initialise the IO and ISR
   vw_set_ptt_inverted(true); // Required for DR3100
@@ -41,9 +53,9 @@ void loop(){
   uint8_t buf[VW_MAX_MESSAGE_LEN];
   uint8_t buflen = VW_MAX_MESSAGE_LEN;
   //wait until we recieve a message
-  vw_wait_rx();
   checkTimeOut();
   //if we did get a message
+  if(vw_wait_rx_max(1000)){
   if (vw_get_message(buf, &buflen)){ // Non-blocking
     //debug print of the id of the orb recieved
     Serial.print("Number of Orbs if got message  ");
@@ -53,17 +65,48 @@ void loop(){
     //if the id has not been seen beofre increment the number of orbs seen
     // if(orbId[buf[2] - 97] == 0) numberOfOrbs++;
     //finds the highest color of all of the orbs present
-    highColor = findMax(buf[1], highColor);
+   // highColor = findMax(buf[1], highColor);
     //sets the timeout time
     // orbId[buf[2] - 97] = 30000;
     //sets the time we have seen the orb
-    prevOrbTime[buf[2] - 97] = millis();
+    //prevOrbTime[buf[2] - 97] = millis();
+    
+    
+    int Orb = buf[2] - 97;
+    if(!orbs[Orb].seen){
+          orbs[Orb].seen = true;
+          orbs[Orb].timeSeen = millis();
+          orbs[Orb].color = buf[1];
+          colors[buf[1]-48]++;
+          for(int i = 0; i < 10; i++){
+            blink(color(buf[1]), 6);
+          }
+     }
+     else {
+        orbs[Orb].timeSeen = millis();
+          if(orbs[Orb].color != buf[1]){
+            colors[orbs[Orb].color-48]--;
+            
+            orbs[Orb].color = buf[1];
+            colors[buf[1]-48]++;
+          }
+     }
   }
-  //debug prints    
-  Serial.print("Number of orbs");
-  Serial.println(numberOfOrbs);
-  if (numberOfOrbs > 0){
-    blink(highColor, numberOfOrbs);
+
+  }
+   if (numberOfOrbs > 0){
+    blink(getColor(), numberOfOrbs);
+  }
+}
+
+color getColor(){
+  while(1){
+    colorCounter = (colorCounter >= 6 ) ? 0 : colorCounter + 1;
+    if(colors[colorCounter]) {
+      Serial.print("color counter = ");
+      Serial.println(colorCounter);
+      return color(colorCounter + 48);
+    }
   }
 }
 /*
@@ -81,10 +124,10 @@ void siteSend(char Color, int peeps){
   msg[1] = Color;
   msg[2] = peepul;
   msg[3] = id;
-  for (int i = 0; i < 14; i++){
+  //for (int i = 0; i < 14; i++){
     vw_send((uint8_t *)msg, strlen(msg));
     vw_wait_tx();
-  }
+ // }
   digitalWrite(transPin, LOW);
 }
 
@@ -92,8 +135,8 @@ void siteSend(char Color, int peeps){
 
 
 //blink, maps the rate based on the number of orbs and then pulse the correct color and rate
-void blink(char Color, int rate){
-  color hue = color(Color);
+void blink(color hue, int rate){
+  //color hue = color(Color);
   pulse(hue, map(rate, 0, 6, 40, 1), map(rate,0,6,5,15));
 }
 
@@ -115,7 +158,7 @@ void pulse(color hue, int rate, int fadeRate){
     if(checkCounter()) siteSend(highColor, numberOfOrbs);
 
   }
-  if(checkCounter())siteSend(highColor, numberOfOrbs);
+  if(checkCounter()) siteSend(highColor, numberOfOrbs);
   for (int fadeValue = 0; fadeValue <= 245; fadeValue += fadeRate){
     analogWrite(REDPIN, map(hue.red-fadeValue, hue.red-255, hue.red, 0, hue.red));
     analogWrite(GREENPIN, map(hue.green-fadeValue, hue.green-255, hue.green, 0, hue.green));
@@ -146,7 +189,7 @@ checks to see if the timer for sending is up
 boolean checkCounter(){
   long int currTime = millis();
   if(currTime - prevSendTime >= sendCounter){
-    sendCounter = random(700, 1500);
+    sendCounter = random(0, 800);
     prevSendTime = millis();
     return true;
   }
@@ -162,10 +205,16 @@ void checkTimeOut(){
   numberOfOrbs = 0;
   long int currTime = millis();
   for(int i = 0; i < 26 ; i++){
-    if(prevOrbTime[i] == 0) continue;
+    //if(prevOrbTime[i] == 0) continue;
+    if(orbs[i].seen == true){
     //if the certain value is greater than zero
-    if(currTime - prevOrbTime[i] < 20000) numberOfOrbs++;
-  }
+      if(currTime - orbs[i].timeSeen < 20000) numberOfOrbs++;
+      else {
+        colors[orbs[i].color - 48]--;
+        orbs[i].seen = false;
+      }
+    }
+ }
 
 }
 
