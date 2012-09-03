@@ -11,15 +11,16 @@ Mike McCauley (mikem@open.com.au)
 
 #include <VirtualWire.h>
 #include <color.h>
+#include <math.h>
 
 /**************
 //dont forget to change the id!!!!!
-ids used = 
+ids used = a, b, e
 **********
 */
 
 typedef struct{
-  boolean init;
+  boolean seen;
   long int timeSeen;
   char color;
 } orb;
@@ -29,13 +30,13 @@ const char id = 'b';
 orb orbs[26];
 int numberOfOrbs = 0;
 int siteRate;
-long int prevOrbTime[26];
+//long int prevOrbTime[26];
 char sites[10];
 long int prevSiteTimes[10];
 int colorCounter = 0;
 int colors[7];
 //char orbColors[26];
-color normColor = color('0');
+color normColor = color('3');
 color siteColor = color('/0');
 int sendCounter = random(400, 800);
 int transPin = 4;
@@ -49,12 +50,13 @@ void setup(){
   }
   //initialize the timeout ties for coming into contact with other orbs
   for(int i = 0; i < 26; i++){
-    prevOrbTime[i] = 0;
-    orbs[i].init = false;
+   // prevOrbTime[i] = 0;
+    orbs[i].seen = false;
   }
   for(int i = 0; i < 7; i++){
     colors[i] = 0;
   }
+  colors[0] = INFINITY;
   pinMode(transPin, OUTPUT);
   // Initialise the IO and ISR
   vw_set_ptt_inverted(true); // Required for DR3100
@@ -69,9 +71,12 @@ void loop(){
   //if the send timer is up send a message
   if(checkCounter()) orbSend();
   //if we are still at a site blink the siteColor
-  if(checkAtSite()) blink(siteColor, siteRate);
+  if(checkAtSite()) blink(normColor, siteRate);
   //check to see if we timed out from other orbs
-  else checkTimeOut();
+  else {
+    checkTimeOut();
+    blink(getColor(), numberOfOrbs);
+  }
   //wait for a message for a randomtime between 500 or 750 milliseconds
   if (vw_wait_rx_max(random(500, 750))){
     //if you get a message
@@ -81,21 +86,27 @@ void loop(){
       Serial.println(numberOfOrbs);
       Serial.print("id of orb or site = ");
       Serial.println(char(buf[2]) );
+      Serial.print("color of orb ");
+      Serial.println(char(buf[1]));
      
       //if the message is a site message
       if (buf[0] == 's') site(buf[1], buf[2], buf[3]);
       //if the message is just another orb
       else {
         int Orb = buf[2]-97;
-        if(!orbs[buf[2]-97].init){
-          orbs[Orb].init = true;
+        if(!orbs[buf[2]-97].seen){
+          orbs[Orb].seen = true;
           orbs[Orb].timeSeen = millis();
-          orbs[Orb].color = buf[3];
+          orbs[Orb].color = buf[1];
+          colors[buf[1]-48]++;
         }
         else {
           orbs[Orb].timeSeen = millis();
-          orbs[Orb].color = buf[3];
-          colors[buf[3]-48]++;
+          if(orbs[Orb].color != buf[1]){
+            colors[orbs[Orb].color-48]--;
+            orbs[Orb].color = buf[1];
+            colors[buf[1]-48]++;
+          }
         }
         
         /*prevOrbTime[buf[2] - 97] = millis();
@@ -104,9 +115,9 @@ void loop(){
     }
   }
  // else Serial.println("fail");//if we are at a site and we did not recieve a message 
-  else if(numberOfOrbs > 0) {
-    blink(color('0'), numberOfOrbs);
-  }
+  /*else if(numberOfOrbs > 0) {
+    blink(getColor(), numberOfOrbs);
+  }*/
   //send the message if the counter of the send time is up 
  if(checkCounter()) orbSend();
 }
@@ -131,6 +142,17 @@ void orbSend(){
   digitalWrite(transPin, LOW);
 }
 
+color getColor(){
+  while(1){
+    colorCounter = (colorCounter >= 6 ) ? 0 : colorCounter + 1;
+    if(colors[colorCounter]) {
+      Serial.print("color counter = ");
+      Serial.println(colorCounter);
+      return color(colorCounter + 48);
+    }
+  }
+}
+
 /*
 calls pulse function with maped delay time (dpending on number of orbs)
 maps the fade rate depending on the number of orbs
@@ -148,8 +170,9 @@ boolean checkAtSite(){
   long int currTime = millis();
    for(int i = 0; i < 10; i++){
 		//if we have never been to a site before the prevTime is zero
-     if(prevSiteTimes[i] == 0) continue;
-    if(currTime - prevSiteTimes[i] < 20000) return true;
+     if(prevSiteTimes[i] != 0){
+      if(currTime - prevSiteTimes[i] < 20000) return true;
+    }
   }
   return false;
 }
@@ -162,19 +185,20 @@ it will also blink at the speed the site tells it to
 */
 void site(char Color, char people, char siteId){ 
   //set the timoue value for a site to 3.
-  //if it is not already in the site array and there is greater than one person
+  //if it is not already in the site array 
   if (prevSiteTimes[siteId-48] == 0 ){
     //update the color to the new color if there is more than one person at the site and we have not yet een to the site
-    normColor = color(normColor.colorNum + 1);
-  }   
-  if(people > '1') {
+    normColor = (normColor.colorNum == '6') ? normColor : color(normColor.colorNum + 1);
+  }  
+ prevSiteTimes[siteId-48] = millis(); 
+  /*if(people > '1') {
     prevSiteTimes[siteId-48] = millis();
-  }
+  } */
   //set the site color equal to the color the site tells us to send.
   siteColor = color(Color);
   siteRate = people - 48;
   //blink with the siteColor and the SiteRate
-  blink(siteColor, siteRate);
+  blink(normColor, siteRate);
 }
 /*
 checks to see if the any of the Orbs this Orb has seen
@@ -185,13 +209,16 @@ void checkTimeOut(){
   numberOfOrbs = 0;
   long int currTime = millis();
   for(int i = 0; i < 26 ; i++){
-    if(orbs[i] != null) {
+    if(orbs[i].seen == true) {
     //if the certain value is greater than zero
       if(currTime - orbs[i].timeSeen < 20000) numberOfOrbs++;
-      else colors[orbs[i].color-48]--;
+      else {
+        colors[orbs[i].color-48]--;
+        orbs[i].seen = false;
+      }
     }
   }
-  blink(normColor, numberOfOrbs);
+  //blink(normColor, numberOfOrbs);
   
 }
 /*
@@ -237,7 +264,7 @@ if it is return true, if it is ot return false
 boolean checkCounter(){
   long int currTime = millis();
   if(currTime - prevSendTime >= sendCounter){
-    sendCounter = random(700, 1500);
+    sendCounter = random(400, 800);
     prevSendTime = millis();
     return true;
   }
