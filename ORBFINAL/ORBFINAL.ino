@@ -15,7 +15,7 @@ Mike McCauley (mikem@open.com.au)
 
 /**************
 //dont forget to change the id!!!!!
-ids used = a, b, e
+ids used = a, b, e, c
 **********
 */
 
@@ -26,7 +26,7 @@ typedef struct{
 } orb;
 
 
-const char id = 'b';
+const char id = 'c';
 orb orbs[26];
 int numberOfOrbs = 0;
 int siteRate;
@@ -36,9 +36,9 @@ long int prevSiteTimes[10];
 int colorCounter = 0;
 int colors[7];
 //char orbColors[26];
-color normColor = color('3');
+color normColor = color('4');
 color siteColor = color('/0');
-int sendCounter = random(400, 800);
+int sendCounter = random(600, 1000);
 int transPin = 4;
 long int prevSendTime = 0;
 
@@ -264,7 +264,7 @@ if it is return true, if it is ot return false
 boolean checkCounter(){
   long int currTime = millis();
   if(currTime - prevSendTime >= sendCounter){
-    sendCounter = random(400, 800);
+    sendCounter = random(600, 1000);
     prevSendTime = millis();
     return true;
   }
