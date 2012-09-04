@@ -36,7 +36,7 @@ long int prevSiteTimes[10];
 int colorCounter = 0;
 int colors[7];
 //char orbColors[26];
-color normColor = color('4');
+color normColor = color('1');
 color siteColor = color('/0');
 int sendCounter = random(600, 1000);
 int transPin = 4;
