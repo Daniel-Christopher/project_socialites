@@ -10,7 +10,7 @@ color::color(char color){
 	if(color >'6') color = '0';
 	colorNum = color;
 	switch (color){
-		case'0': red = 255; green = 255; blue = 255; break;//white
+		case'0': red = 100; green = 100; blue = 100; break;//white
 		case '1': red = 255; green = 0; blue = 0; break;//red
 		case '2': red = 255; green = 50; blue = 0; break;//yellow
 		case '3': red = 0; green = 255; blue = 0; break;//green

@@ -26,7 +26,7 @@ typedef struct{
 } orb;
 
 
-const char id = 'c';
+const char id = 'g';
 orb orbs[26];
 int numberOfOrbs = 0;
 int siteRate;
@@ -159,7 +159,7 @@ maps the fade rate depending on the number of orbs
 */
 void blink(color hue, int rate){
   
-  pulse(hue, map(rate, 0, 6, 40, 1), map(rate,0,6,5,15));
+  pulse(hue, map(rate, 0, 6, 40, 10), map(rate,0,6,5,10));
 }
 
 /*
@@ -211,7 +211,7 @@ void checkTimeOut(){
   for(int i = 0; i < 26 ; i++){
     if(orbs[i].seen == true) {
     //if the certain value is greater than zero
-      if(currTime - orbs[i].timeSeen < 20000) numberOfOrbs++;
+      if(currTime - orbs[i].timeSeen < 20000) numberOfOrbs = (numberOfOrbs >= 7) ? 7 : numberOfOrbs+1;
       else {
         colors[orbs[i].color-48]--;
         orbs[i].seen = false;

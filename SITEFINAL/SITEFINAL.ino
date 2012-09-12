@@ -21,7 +21,7 @@
   char color;
 } orb;
  
-const char id = '7';
+const char id = '4';
 int numberOfOrbs = 0;
 int siteRate = 0;
 int colors[7];
@@ -29,7 +29,7 @@ orb orbs[26];
 long int prevOrbTime[26];
 char highColor = '0';
 int colorCounter = 0;
-int sendCounter = random(400, 800);
+int sendCounter = random(0, 400);
 int transPin = 4;
 long int prevSendTime = 0;
 
@@ -79,7 +79,8 @@ void loop(){
           orbs[Orb].color = buf[1];
           colors[buf[1]-48]++;
           for(int i = 0; i < 10; i++){
-            blink(color(buf[1]), 6);
+            //blink(color(buf[1]), 6);
+            pulse(color(buf[1]), 1, 15);
           }
      }
      else {
@@ -137,7 +138,7 @@ void siteSend(char Color, int peeps){
 //blink, maps the rate based on the number of orbs and then pulse the correct color and rate
 void blink(color hue, int rate){
   //color hue = color(Color);
-  pulse(hue, map(rate, 0, 6, 40, 1), map(rate,0,6,5,15));
+  pulse(hue, map(rate, 0, 6, 40, 10), map(rate,0,6,5,10));
 }
 
 
@@ -189,7 +190,7 @@ checks to see if the timer for sending is up
 boolean checkCounter(){
   long int currTime = millis();
   if(currTime - prevSendTime >= sendCounter){
-    sendCounter = random(0, 800);
+    sendCounter = random(0, 400);
     prevSendTime = millis();
     return true;
   }
@@ -208,7 +209,7 @@ void checkTimeOut(){
     //if(prevOrbTime[i] == 0) continue;
     if(orbs[i].seen == true){
     //if the certain value is greater than zero
-      if(currTime - orbs[i].timeSeen < 20000) numberOfOrbs++;
+      if(currTime - orbs[i].timeSeen < 40000) numberOfOrbs = (numberOfOrbs >= 7) ? 7 : numberOfOrbs+1;
       else {
         colors[orbs[i].color - 48]--;
         orbs[i].seen = false;
